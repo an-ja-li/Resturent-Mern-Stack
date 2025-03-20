@@ -1,14 +1,25 @@
 import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import CustomNavbar from "./components/Navbar";  // Import with new name
+import CustomNavbar from "./components/Navbar";
 import Homepage from "./pages/Homepage";
+import Staff from "./pages/Staff";
+import FoodMenu from "./pages/FoodMenu";
+import Order from "./pages/Order";
+import Bills from "./pages/Bills";
 
 function App() {
   return (
-    <div className="App">
-      <CustomNavbar /> {/* Use new component name */}
-      <Homepage />
-    </div>
+    <Router>
+      <CustomNavbar />
+      <Routes>
+        <Route path="/" element={<Homepage />} />
+        <Route path="/staff" element={<Staff />} />
+        <Route path="/food-menu" element={<FoodMenu />} />
+        <Route path="/order" element={<Order />} />
+        <Route path="/bills" element={<Bills />} />
+      </Routes>
+    </Router>
   );
 }
 
