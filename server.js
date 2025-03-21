@@ -19,21 +19,57 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // Food Schema
 const FoodSchema = new mongoose.Schema({
-    name: String,
-    price: Number,
-    image: String, // Stores image path
+    name: { type: String, required: true },
+    price: { type: Number, required: true, min: 0 },
+    image: { type: String, required: true } // Stores image path
 });
 const Food = mongoose.model("Food", FoodSchema);
 
 // Routes
-app.get("/", (req, res) => res.send("Server is running..."));
+app.get("/", (req, res) => res.send("🚀 Server is running..."));
 
+// ✅ Fetch all food items
 app.get("/api/foods", async (req, res) => {
     try {
         const foods = await Food.find();
         res.json(foods);
     } catch (err) {
         res.status(500).json({ message: "Error fetching foods", error: err });
+    }
+});
+
+// ✅ Add a new food item
+app.post("/api/foods", async (req, res) => {
+    try {
+        const { name, price, image } = req.body;
+        const newFood = new Food({ name, price, image });
+        await newFood.save();
+        res.status(201).json(newFood);
+    } catch (err) {
+        res.status(400).json({ message: "Error adding food item", error: err });
+    }
+});
+
+// ✅ Update a food item
+app.put("/api/foods/:id", async (req, res) => {
+    try {
+        const { name, price, image } = req.body;
+        const updatedFood = await Food.findByIdAndUpdate(req.params.id, { name, price, image }, { new: true });
+        if (!updatedFood) return res.status(404).json({ message: "Food item not found" });
+        res.json(updatedFood);
+    } catch (err) {
+        res.status(400).json({ message: "Error updating food item", error: err });
+    }
+});
+
+// ✅ Delete a food item
+app.delete("/api/foods/:id", async (req, res) => {
+    try {
+        const deletedFood = await Food.findByIdAndDelete(req.params.id);
+        if (!deletedFood) return res.status(404).json({ message: "Food item not found" });
+        res.json({ message: "Food item deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ message: "Error deleting food item", error: err });
     }
 });
 
