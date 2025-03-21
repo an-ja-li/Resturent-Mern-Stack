@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import "./FoodMenu.css";
 
@@ -13,6 +14,7 @@ const FoodMenu = () => {
   const fetchFoods = () => {
     axios.get("http://localhost:5000/api/foods")
       .then((response) => {
+        console.log("Fetched Foods:", response.data); // Debugging
         setFoods(response.data);
         setLoading(false);
       })
@@ -57,7 +59,10 @@ const FoodMenu = () => {
                 <div className="card-body text-center">
                   <h5 className="card-title">{food.name}</h5>
                   <p className="fw-bold text-success">₹{food.price.toFixed(2)}</p>
-                  <button className="btn btn-danger" onClick={() => handleDelete(food._id)}>🗑 Delete</button>
+                  <div className="d-flex justify-content-center">
+                    <Link to={`/edit-food/${food._id}`} className="btn btn-warning me-2">✏ Edit</Link>
+                    <button className="btn btn-danger" onClick={() => handleDelete(food._id)}>🗑 Delete</button>
+                  </div>
                 </div>
               </div>
             </div>

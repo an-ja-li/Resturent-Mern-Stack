@@ -73,6 +73,20 @@ app.delete("/api/foods/:id", async (req, res) => {
     }
 });
 
+app.get("/api/foods/:id", async (req, res) => {
+    try {
+      const food = await Food.findById(req.params.id);
+      if (!food) {
+        return res.status(404).json({ message: "Food item not found" });
+      }
+      res.json(food);
+    } catch (error) {
+      console.error("Error fetching food:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  
+
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
