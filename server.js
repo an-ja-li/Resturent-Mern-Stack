@@ -1,6 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const multer = require("multer"); // For handling image uploads
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
@@ -8,7 +10,7 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors());
-app.use("/images", express.static("public/images")); // Serve images from /public/images
+app.use("/images", express.static("public/images")); // Serve uploaded images
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, {
@@ -17,16 +19,34 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
+// Configure Multer for Image Upload
+const storage = multer.diskStorage({
+    destination: "public/images",
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
+});
+const upload = multer({ storage });
+
 // Food Schema
 const FoodSchema = new mongoose.Schema({
     name: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
-    image: { type: String, required: true } // Stores image path
+    image: { type: String, required: true } // Stores image filename/path
 });
 const Food = mongoose.model("Food", FoodSchema);
 
 // Routes
 app.get("/", (req, res) => res.send("🚀 Server is running..."));
+
+// ✅ Image Upload Route
+app.post("/api/upload", upload.single("image"), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+    }
+    const imageUrl = `/images/${req.file.filename}`; // Relative path
+    res.json({ imageUrl });
+});
 
 // ✅ Fetch all food items
 app.get("/api/foods", async (req, res) => {
@@ -73,19 +93,19 @@ app.delete("/api/foods/:id", async (req, res) => {
     }
 });
 
+// ✅ Fetch a single food item
 app.get("/api/foods/:id", async (req, res) => {
     try {
-      const food = await Food.findById(req.params.id);
-      if (!food) {
-        return res.status(404).json({ message: "Food item not found" });
-      }
-      res.json(food);
+        const food = await Food.findById(req.params.id);
+        if (!food) {
+            return res.status(404).json({ message: "Food item not found" });
+        }
+        res.json(food);
     } catch (error) {
-      console.error("Error fetching food:", error);
-      res.status(500).json({ message: "Server error" });
+        console.error("Error fetching food:", error);
+        res.status(500).json({ message: "Server error" });
     }
-  });
-  
+});
 
 // Start Server
 const PORT = process.env.PORT || 5000;

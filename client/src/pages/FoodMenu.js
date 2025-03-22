@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./FoodMenu.css";
 
 const FoodMenu = () => {
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate(); // For navigation
 
   useEffect(() => {
     fetchFoods();
@@ -38,7 +39,11 @@ const FoodMenu = () => {
 
   return (
     <div className="container mt-4">
-      <h2 className="text-center mb-4">Food Menu</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="text-center">Food Menu</h2>
+        {/* ✅ Add Menu Button */}
+        <button className="btn btn-primary" onClick={() => navigate("/add-food")}>➕ Add Food</button>
+      </div>
 
       {loading ? (
         <div className="text-center"><h4>Loading...</h4></div>
