@@ -1,79 +1,213 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Button, Table, Modal, Form, Spinner, Alert } from "react-bootstrap";
 import "./FoodMenu.css";
 
 const FoodMenu = () => {
-  const [foods, setFoods] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate(); // For navigation
+  const [menu, setMenu] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editingFood, setEditingFood] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    category: "Starter",
+    price: "",
+    image: "",
+    isVeg: true,
+  });
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const categories = ["Starter", "Main Course", "Dessert", "Beverages"];
 
   useEffect(() => {
-    fetchFoods();
+    fetchMenu();
   }, []);
 
-  const fetchFoods = () => {
-    axios.get("http://localhost:5000/api/foods")
-      .then((response) => {
-        console.log("Fetched Foods:", response.data); // Debugging
-        setFoods(response.data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching food data:", error);
-        setLoading(false);
-      });
+  const fetchMenu = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/menu");
+      setMenu(response.data);
+    } catch (err) {
+      setError("Failed to fetch menu. Please try again.");
+    }
   };
 
-  // Function to Delete Food Item
+  const handleShowModal = (foodItem = null) => {
+    setEditingFood(foodItem);
+    setFormData(
+      foodItem || { name: "", category: "Starter", price: "", image: "", isVeg: true }
+    );
+    setImagePreview(foodItem?.image || null);
+    setImageFile(null);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setImagePreview(null);
+    setImageFile(null);
+    setError("");
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleToggleVegStatus = (e) => {
+    setFormData({ ...formData, isVeg: e.target.value === "Veg" });
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async () => {
+    if (!imageFile) return formData.image;
+
+    const formDataImg = new FormData();
+    formDataImg.append("image", imageFile);
+
+    try {
+      const response = await axios.post("http://localhost:5000/api/upload", formDataImg, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data.imageUrl;
+    } catch (err) {
+      setError("Failed to upload image. Please try again.");
+      return null;
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const uploadedImageUrl = await uploadImage();
+    if (uploadedImageUrl === null) {
+      setLoading(false);
+      return;
+    }
+
+    const updatedData = {
+      name: formData.name.trim(),
+      category: formData.category,
+      price: Number(formData.price),
+      image: uploadedImageUrl || formData.image,
+      isVeg: formData.isVeg,
+    };
+
+    try {
+      if (editingFood) {
+        await axios.put(`http://localhost:5000/api/menu/${editingFood._id}`, updatedData);
+      } else {
+        await axios.post("http://localhost:5000/api/menu", updatedData);
+      }
+      fetchMenu();
+      handleCloseModal();
+    } catch (err) {
+      setError("Error saving food item. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
+    if (window.confirm("Are you sure you want to delete this food item?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/foods/${id}`);
-        setFoods(foods.filter(food => food._id !== id)); // Update UI
-      } catch (error) {
-        console.error("Error deleting food item:", error);
+        await axios.delete(`http://localhost:5000/api/menu/${id}`);
+        fetchMenu();
+      } catch (err) {
+        setError("Error deleting food item. Please try again.");
       }
     }
   };
 
   return (
     <div className="container mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="text-center">Food Menu</h2>
-        {/* ✅ Add Menu Button */}
-        <button className="btn btn-primary" onClick={() => navigate("/add-food")}>➕ Add Food</button>
-      </div>
+      {error && <Alert variant="danger">{error}</Alert>}
 
-      {loading ? (
-        <div className="text-center"><h4>Loading...</h4></div>
-      ) : foods.length === 0 ? (
-        <div className="text-center"><h4>No food items available</h4></div>
-      ) : (
-        <div className="row">
-          {foods.map((food) => (
-            <div key={food._id} className="col-md-3 mb-4">
-              <div className="card shadow-sm">
-                <img 
-                  src={`http://localhost:5000${food.image}`} 
-                  className="card-img-top" 
-                  alt={food.name} 
-                  style={{ height: "200px", objectFit: "cover" }}
-                  onError={(e) => (e.target.src = "/images/placeholder.png")}
-                />
-                <div className="card-body text-center">
-                  <h5 className="card-title">{food.name}</h5>
-                  <p className="fw-bold text-success">₹{food.price.toFixed(2)}</p>
-                  <div className="d-flex justify-content-center">
-                    <Link to={`/edit-food/${food._id}`} className="btn btn-warning me-2">✏ Edit</Link>
-                    <button className="btn btn-danger" onClick={() => handleDelete(food._id)}>🗑 Delete</button>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <Button variant="primary" onClick={() => handleShowModal()}>Add New Food Item</Button>
+
+      <Table striped bordered hover className="mt-3">
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Type</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {menu.map((food) => (
+            <tr key={food._id}>
+              <td><img src={food.image} alt={food.name} className="food-image" /></td>
+              <td>{food.name}</td>
+              <td>{food.category}</td>
+              <td>${food.price}</td>
+              <td className={food.isVeg ? "text-success" : "text-danger"}>
+                {food.isVeg ? "Veg 🌱" : "Non-Veg 🍗"}
+              </td>
+              <td>
+                <Button variant="warning" size="sm" onClick={() => handleShowModal(food)}>Edit</Button>
+                <Button variant="danger" size="sm" className="ms-2" onClick={() => handleDelete(food._id)}>Delete</Button>
+              </td>
+            </tr>
           ))}
-        </div>
-      )}
+        </tbody>
+      </Table>
+
+      <Modal show={showModal} onHide={handleCloseModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>{editingFood ? "Edit Food Item" : "Add New Food Item"}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label>Name</Form.Label>
+              <Form.Control type="text" name="name" value={formData.name} onChange={handleChange} required />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Category</Form.Label>
+              <Form.Select name="category" value={formData.category} onChange={handleChange} required>
+                {categories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Price</Form.Label>
+              <Form.Control type="number" name="price" value={formData.price} onChange={handleChange} required />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Type</Form.Label>
+              <Form.Select name="isVeg" value={formData.isVeg ? "Veg" : "Non-Veg"} onChange={handleToggleVegStatus} required>
+                <option value="Veg">Veg</option>
+                <option value="Non-Veg">Non-Veg</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Upload Image</Form.Label>
+              <Form.Control type="file" accept="image/*" onChange={handleImageChange} />
+              {imagePreview && <img src={imagePreview} alt="Preview" className="preview-image mt-2" />}
+            </Form.Group>
+            <Button variant="primary" type="submit" disabled={loading}>
+              {loading ? <Spinner animation="border" size="sm" /> : "Save"}
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 };
