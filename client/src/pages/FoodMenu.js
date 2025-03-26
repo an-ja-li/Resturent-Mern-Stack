@@ -5,8 +5,12 @@ import "./FoodMenu.css";
 
 const FoodMenu = () => {
   const [menu, setMenu] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [vegFilter, setVegFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
   const [editingFood, setEditingFood] = useState(null);
+
   const [formData, setFormData] = useState({
     name: "",
     category: "Starter",
@@ -14,12 +18,14 @@ const FoodMenu = () => {
     image: "",
     isVeg: true,
   });
+
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const categories = ["Starter", "Main Course", "Dessert", "Beverages"];
+  const categories = ["All", "Starter", "Main Course", "Dessert", "Beverages"];
+  const vegOptions = ["All", "Veg", "Non-Veg"];
 
   useEffect(() => {
     fetchMenu();
@@ -132,11 +138,40 @@ const FoodMenu = () => {
     }
   };
 
+  // ✅ Apply search and filters
+  const filteredMenu = menu.filter((food) => {
+    return (
+      food.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      (categoryFilter === "All" || food.category === categoryFilter) &&
+      (vegFilter === "All" || (vegFilter === "Veg" && food.isVeg) || (vegFilter === "Non-Veg" && !food.isVeg))
+    );
+  });
+
   return (
     <div className="container mt-4">
       {error && <Alert variant="danger">{error}</Alert>}
 
-      <Button variant="primary" onClick={() => handleShowModal()}>Add New Food Item</Button>
+      {/* ✅ Search and Filter Bar */}
+      <div className="d-flex gap-3 mb-3 align-items-center">
+        <Form.Control
+          type="text"
+          placeholder="Search by name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ maxWidth: "250px" }}
+        />
+        <Form.Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} style={{ maxWidth: "200px" }}>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </Form.Select>
+        <Form.Select value={vegFilter} onChange={(e) => setVegFilter(e.target.value)} style={{ maxWidth: "150px" }}>
+          {vegOptions.map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </Form.Select>
+        <Button variant="primary" onClick={() => handleShowModal()}>Add New Food Item</Button>
+      </div>
 
       <Table striped bordered hover className="mt-3">
         <thead>
@@ -150,7 +185,7 @@ const FoodMenu = () => {
           </tr>
         </thead>
         <tbody>
-          {menu.map((food) => (
+          {filteredMenu.map((food) => (
             <tr key={food._id}>
               <td><img src={food.image} alt={food.name} className="food-image" /></td>
               <td>{food.name}</td>
@@ -168,13 +203,14 @@ const FoodMenu = () => {
         </tbody>
       </Table>
 
+      {/* ✅ Properly Displaying the Modal Form */}
       <Modal show={showModal} onHide={handleCloseModal}>
         <Modal.Header closeButton>
           <Modal.Title>{editingFood ? "Edit Food Item" : "Add New Food Item"}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3">
+          <Form.Group className="mb-3">
               <Form.Label>Name</Form.Label>
               <Form.Control type="text" name="name" value={formData.name} onChange={handleChange} required />
             </Form.Group>
